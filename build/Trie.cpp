@@ -7,14 +7,14 @@ int getIndex(char x){
 }
 
 const int SIZE = 36;
-
+const int RECOMMENDATIONS_SIZE = 5;
 class TrieNode {
 public:
     TrieNode* children[SIZE];
     bool isEndOfWord;
     int cntOfWord;
     set<string> presentIn;
-    vector<pair<string,int>> recommend;
+    vector<pair<int,string>> recommend;
     TrieNode() {
         isEndOfWord = false;
         cntOfWord=0;
@@ -27,17 +27,15 @@ public:
 
 class Trie {
 private:
-    string file;
     TrieNode* root;
 
 public:
 
-    Trie(string& filename) {
-        file = filename;
+    Trie() {
         root = new TrieNode();
     }
 
-    void insert(const string& word) {
+    void insert(const string& word, string& file) {
         TrieNode* current = root;
         for (char ch : word) {
             int index = getIndex(ch);
@@ -51,11 +49,11 @@ public:
         current->isEndOfWord = true;
     }
 
-    set<string> search(const string& word) {
+    set<string> search(string word) {
         TrieNode* current = root;
         set<string> listOfFiles;
         for (char ch : word) {
-            int index = ch - 'a';
+            int index = getIndex(ch);
             if (!current->children[index]) {
                 return listOfFiles;
             }
@@ -65,25 +63,26 @@ public:
         return listOfFiles = current->presentIn;
     }
 
-    vector<pair<string,int>> recs_dfs(char &lastLetter,TrieNode* node){
+    vector<pair<int,string>> build_recs_dfs(char lastLetter,TrieNode* node){
 
-        vector<pair<string,int>> recs;
+        vector<pair<int,string>> recs;
         set<pair<int,string>> children_recs;
 
         for(int i=0;i<SIZE;i++){
+            if(!(node->children[i])) continue;
             char letter;
             if(i<10) letter = i+'0';
             else letter = i-10+'a';
-            vector<pair<string,int>> child_recs = recs_dfs(letter,node->children[i]);
+            vector<pair<int,string>> child_recs = build_recs_dfs(letter,node->children[i]);
 
             for(int j=0;j<child_recs.size();j++){
-
-                if(children_recs.size()<5) {
-                    children_recs.insert({child_recs[j].second,child_recs[j].first});
+                
+                if(children_recs.size() < RECOMMENDATIONS_SIZE) {
+                    children_recs.insert({child_recs[j].first,child_recs[j].second});
                 }else{
-                    if(children_recs.begin()->first < child_recs[j].second){
+                    if(children_recs.begin()->first < child_recs[j].first){
                         children_recs.erase(children_recs.begin());
-                        children_recs.insert({child_recs[j].second,child_recs[j].first});
+                        children_recs.insert({child_recs[j].first,child_recs[j].second});
                     }
                 }
 
@@ -95,7 +94,7 @@ public:
             string temp = "";
             temp+=lastLetter;
             temp+=it.second;
-            recs.push_back({temp,it.first});
+            recs.push_back({it.first,temp});
         }
 
         node->recommend=recs;
@@ -104,14 +103,14 @@ public:
             string temp = "";
             temp+=lastLetter;
             int currCnt = node->cntOfWord;
-            if(children_recs.size()<5) {
-                recs.push_back({temp,currCnt});
+            if(children_recs.size() < RECOMMENDATIONS_SIZE) {
+                recs.push_back({currCnt,temp});
             }else{
                 if(currCnt > children_recs.begin()->first){
                     for(int i=0;i<recs.size();i++){
-                        if(recs[i].first==children_recs.begin()->second && recs[i].second==children_recs.begin()->first){
-                            recs[i].first=temp;
-                            recs[i].second=currCnt;
+                        if(recs[i].first==children_recs.begin()->first && recs[i].second==children_recs.begin()->second){
+                            recs[i].first=currCnt;
+                            recs[i].second=temp;
                         }
                     }
                 }
@@ -120,9 +119,42 @@ public:
         return recs;
     }
 
-    
+    void start_build(){
+        build_recs_dfs('.',root);
+    }
+
+    vector<pair<int,string>> get_recs(string word) {
+        TrieNode* current = root;
+        vector<pair<int,string>> recs;
+        for (char ch : word) {
+            int index = getIndex(ch);
+            if (!current->children[index]) {
+                return recs;
+            }
+            current = current->children[index];
+        }
+        return recs = current->recommend;
+    }
 };
 
 int main(){
-    
+    //testing
+    vector<string> tp1 = {"harsh","harsh","harshxy","harshxy","harshxy","harshxyz","harshxyz","harshxyz","harshxyz","harshtp","harsyrt","harshytiyu","abcsdsr","seziwuad"};
+    string str = "file";
+    Trie tr;
+    for(int i=0;i<tp1.size();i++){
+        string s = "tp1";
+        tr.insert(tp1[i],s);
+    }
+    set<string> check = tr.search(tp1[0]);
+    cout<<check.size()<<endl;
+    check = tr.search("haryuqy");
+    cout<<"hi"<<endl;
+    tr.start_build();
+    cout<<"hi"<<endl;
+    vector<pair<int,string>> rec = tr.get_recs("h");
+    for(auto it : rec){
+        cout<<it.second<<" "<<it.first<<endl;
+    }
+
 }
